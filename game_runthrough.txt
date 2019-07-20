@@ -1,0 +1,126 @@
+Welcome to the casino!
+You need chips to play Blackjack. How many chips would you like? Enter whole number:
+Now you have {num} chips. Is that enough? Y or N
+if N:
+	How many more chips would you like? Enter whole number:
+Here is your table, have fun!
+Make bet? Enter whole number:
+
+Current Bet: {bet}
+
+Dealer:			Player:
+{1st card}		{1st card}
+{facedwn card}		{2nd card}
+{total}			{total}
+
+if Dealer.{1st card} == "Ace":
+	Would you like to take insurance? Y or N
+	if Y:
+
+Current Bet: {bet}
+Insured
+
+Dealer:			Player:
+{1st card}		{1st card}
+{facedwn card}		{2nd card}
+{total}			{total}
+
+Would you like to double down? Y or N
+if Y:
+
+Current Bet: {bet*2}
+
+Dealer:			Player:
+{1st card}		{1st card}
+{facedwn card}		{2nd card}
+			{last card}
+{total}			{total}
+
+if DoubleDown == False:
+	if {1st card}.value == {2nd card}.value:
+		You were dealt doubles! Would you like to split your hand? Y or N
+		if Y:
+
+Current Bet: {bet}
+
+Dealer:			Player:			Player:
+{1st card}		{1st card}		{2nd card}
+{facedwn card}		{new card}		{new card}
+{total}			{total}			{total}
+
+	if {1st card}.value == {new card}.value:
+		You were dealt doubles! Would you like to split your hand? Y or N
+		if Y:
+
+Current Bet: {bet}
+
+Dealer:			Player:			Player			Player:
+{1st card}		{1st card}		{new card}		{2nd card}
+{facedwn card}		{new card}		{new card}		{new card}
+{total}			{total}			{total}			{total}
+
+while {total} != BUST:
+	Would you like to hit? + for Hit & 0 for Stay
+	if +:
+
+Current Bet: {bet}
+
+Dealer:			Player:			Player:
+{1st card}		{1st card}		{2nd card}
+{facedwn card}		{new card}		{new card}
+			{3rd card}
+{total}			{total}			{total}
+
+	if {total} > 21:
+		if soft_aces == True:
+			{total} -= 10
+		if {total} > 21:
+			{total} = BUST
+	if 0:
+		break while loop
+
+MOVE_TO_NEXT_HAND, GOTO_WHILE
+AFTER_ALL_HANDS
+
+if not all_hands == BUST:
+	Reveal Dealer hole card. Press Enter
+
+Current Bet: {bet}
+
+Dealer:		Player:		Player:
+{1st card}	{1st card}	{2nd card}
+{2nd card}	{new card}	{new card}
+		{3rd card}
+{total}		{total}		{total}
+
+if Dealer.hit == True:
+	Reveal next Dealer card. Press Enter
+
+Current Bet: {bet}
+
+Dealer:		Player:		Player:
+{1st card}	{1st card}	{2nd card}
+{2nd card}	{new card}	{new card}
+{3rd card}	{3rd card}
+{total}		{total}		{total}
+
+DO OUTCOMES:
+
+Current Bet: {bet}
+Insurance Succeeded!/Failed
+
+Dealer:		Player:		Player		Player:
+{1st card}	{1st card}	{new card}	{2nd card}
+{2nd card}	{new card}	{new card}	{new card}
+{total}		{total}		{total}		{total}
+		WIN!		LOSE		DRAW
+
+Player wins {num}!
+Player loses {num}.
+Player goes even.
+
+Would you like more chips? Y or No
+if Y:
+	How many chips would you like? Enter whole number
+
+Would you like to play another hand?
