@@ -1,5 +1,6 @@
 from random import *
-from os import system, name
+import os
+#from os import system, name
 
 values = ["Ace", 2, 3, 4, 5, 6, 7, 8, 9, 10, "Jack", "Queen", "King"]
 suits = ["Hearts", "Diamonds", "Spades", "Clubs"]
@@ -79,7 +80,7 @@ class Dealer:
     def __init__(self):
         self.hand = None
         self.deck = Deck()
-        self.prepare_deck()
+        self.deck.prepare_deck()
 
     def __str__(self):
         return str(self.hand)
@@ -87,9 +88,9 @@ class Dealer:
 class Player:
     def __init__(self, dealer):
         self.hands = []
-        self.dealer = None
+        self.dealer = dealer
         self.chips = 0
-        self.bet = bet
+        self.bet = 0
         self.double_down = False
         self.insurance = False
 
@@ -99,9 +100,27 @@ class Player:
             string += str(hand) + "\n"
         return string
 
+    def prepare_for_next_hand(self):
+        self.hands = []
+        self.double_down = False
+        self.insurance = False
+        self.dealer.hand = None
+        self.dealer.deck = Deck()
+        self.dealer.deck.prepare_deck()
+        if self.chips <= 0:
+            print("You're out of chips! Let's add more. Press enter to continue:")
+            clear()
+            self.add_chips()
+
     def play_hand(self):
-        bet = enter_positive_integer("How many chips would you like to bet? Enter whole number: ")
-        new_hand = PlayerHand(self, bet)
+        while True:
+            print("You have {} chips.".format(self.chips))
+            self.bet = enter_positive_integer("How many chips would you like to bet? Enter whole number: ")
+            if self.bet <= self.chips:
+                break
+            input("Invalid bet. You cannot bet more than you have chips. Press enter to try again:")
+            clear()
+        new_hand = PlayerHand(self)
         self.hands.append(new_hand)
         self.dealer.hand = DealerHand(self.dealer)
         for i in range(2):
@@ -110,15 +129,95 @@ class Player:
         self.dealer.hand.face_down_head_card()
         self.print_table()
         if self.dealer.hand.has_soft_ace():
-            if enter_YorN("Would you like to take insurance? Y or N"):
+            if 3*self.bet//2 > self.chips:
+                input("You cannot take insurance because you don't have enough chips. Press enter to continue:")
+            elif enter_YorN("Would you like to take insurance? Y or N: "):
                 self.insurance = True
                 self.print_table()
-        if enter_YorN("Would you like to double down? Y or N"):
-            self.double_down = True
-            self.bet = self.bet*2
-            self.hands[0].get_card()
+        if 9 <= self.hands[0].calculate_total() and self.hands[0].calculate_total() <= 11:
+            if self.bet*2 > self.chips:
+                input("You cannot double down because you don't have enough chips. Press enter to continue:")
+                self.print_table()
+            elif enter_YorN("Would you like to double down? Y or N: "):
+                self.double_down = True
+                self.bet = self.bet*2
+                self.hands[0].get_card()
+                self.print_table()
+        if not self.double_down:
+            try:
+                index = 0
+                while True:
+                    hand = self.hands[index]
+                    if not hand.head_card.next_card:
+                        hand.get_card()
+                    if hand.head_card.value == hand.head_card.next_card.value:
+                        if enter_YorN("Doubles! Would you like to split? Y or N: "):
+                            new_hand = PlayerHand(self)
+                            self.hands.append(new_hand)
+                            self.hands[-1].head_card = hand.head_card.next_card
+                            self.hands[-1].size = 1
+                            hand.head_card.next_card = None
+                            hand.size = 1
+                    if hand.head_card.next_card == None:
+                        hand.get_card()
+                    self.print_table()
+                    while hand.calculate_total() != "BUST":
+                        if enter_YorN("Hit? Y or N: "):
+                            hand.get_card()
+                            self.print_table()
+                        else:
+                            self.print_table()
+                            break
+                    index += 1
+            except IndexError:
+                pass
+        input("Now the Dealer will play. Press enter to reveal the Dealer's face down card:")
+        self.dealer.hand.face_up_head_card()
+        self.print_table()
+        if self.insurance:
+            if self.dealer.hand.calculate_total() == 21:
+                input("Insurance Succeeded! {} added to chips. Press enter to continue.".format(self.bet))
+                self.chips += self.bet
+            else:
+                input("Insurance Failed! {} taken from chips. Press enter to continue.".format(self.bet//2))
+                self.chips -= self.bet//2
+            self.insurance = False
             self.print_table()
+        while self.dealer.hand.calculate_total() != "BUST" and self.dealer.hand.calculate_total() < 17:
+            input("Dealer must hit. Press enter to continue.")
+            self.dealer.hand.get_card()
+            self.print_table()
+        dealer_result = self.dealer.hand.calculate_total()
+        if dealer_result == "BUST":
+            input("Dealer has busted! Press enter to continue.")
         else:
+            input("Dealer has stood at {}. Press enter to continue.".format(dealer_result))
+        self.print_table()
+        for hand in self.hands:
+            if hand.calculate_total() == "BUST":
+                input("Player busted on this hand. Player loses {} chips. Press enter to continue.".format(self.bet))
+                self.chips -= self.bet
+                self.print_table()
+            elif hand.size == 2 and hand.calculate_total() == 21:
+                input("Player got blackjack! Player wins {} chips. Press enter to continue.".format(int(1.5*self.bet)))
+                self.chips += int(1.5*self.bet)
+                self.print_table()
+            elif dealer_result == "BUST":
+                input("Dealer busted and you didn't! You win {} chips. Press enter to continue.".format(self.bet))
+                self.chips += self.bet
+                self.print_table()
+            elif hand.calculate_total() > dealer_result:
+                input("Player won! Player wins {} chips. Press enter to continue.".format(self.bet))
+                self.chips += self.bet
+                self.print_table()
+            elif hand.calculate_total() == dealer_result:
+                input("Player tied. Player gains nor loses chips. Press enter to continue.")
+                self.print_table()
+            else:
+                input("Player lost. Player loses {} chips. Press enter to continue.".format(self.bet))
+                self.chips -= self.bet
+                self.print_table()
+        clear()
 
     def print_table(self):
         def find_largest_hand_size():
@@ -128,42 +227,43 @@ class Player:
                     largest_hand_size = hand.size
             return largest_hand_size
 
+        def make_string_24(string):
+            spaces = 24 - len(string)
+            for i in range(spaces):
+                string += " "
+            return string
+
         clear()
         string = "Current Bet: {}\n".format(self.bet)
         if self.insurance:
-            string += "Insured\n\n"
-        else:
-            string += "\n\n"
-        string += "Dealer:"
+            string += "Insured"
+        string += "\n\n"
+        string += make_string_24("Dealer:")
         for hand in self.hands:
-            string += "\t\t\tPlayer:"
+            string += make_string_24("Player:")
         string += "\n"
         all_hands = [self.dealer.hand] + self.hands
         largest_hand_size = find_largest_hand_size()
         for i in range(largest_hand_size):
             for hand in all_hands:
-                card = hand.head_card
-                counter = 0
-                while i > counter:
-                    card = card.next_card
-                temp_string = str(card)
-                spaces = 24 - len(temp_string)
-                spaces_string = ""
-                counter = 0
-                while spaces > counter:
-                    spaces_string += " "
-                string += temp_string + spaces_string
+                if hand.size <= i:
+                    string += make_string_24("")
+                    continue
+                card = hand.backwards(i)
+                if card.is_face_down:
+                    string += make_string_24("*Facedown*")
+                else:
+                    string += make_string_24(str(card))
+            string += "\n"
         for hand in all_hands:
             total, soft_ace = hand.calculate_hand()
-            temp_string = "Total: {}".format(total)
+            if total == "BUST":
+                string += make_string_24("BUST")
+                continue
+            temp_string = "Total: {} ".format(total)
             if soft_ace:
                 temp_string += "Soft Ace"
-            spaces = 24 - len(temp_string)
-            spaces_string = ""
-            counter = 0
-            while spaces > counter:
-                spaces_string += " "
-            string += temp_string + spaces_string
+            string += make_string_24(temp_string)
         print(string)
 
     def add_chips(self):
@@ -194,12 +294,29 @@ class Hand:
             card = card.next_card
         return string
 
+    def __len__(self):
+        count = 0
+        card = self.head_card
+        while card:
+            count += 1
+            card = card.next_card
+        return count
+
+    def backwards(self, index):
+        counter = self.size-1 - index
+        card = self.head_card
+        while counter > 0:
+            card = card.next_card
+            counter -= 1
+        return card
+
     def calculate_hand(self):
         total = 0
         soft_ace = False
         card = self.head_card
         while card:
             if card.is_face_down:
+                card = card.next_card
                 continue
             if isinstance(card.value, int):
                 total += card.value
@@ -216,7 +333,7 @@ class Hand:
                     total -= 10
                     soft_ace = False
                 else:
-                    return -1
+                    return "BUST", 0
             card = card.next_card
         return total, soft_ace
 
@@ -228,14 +345,21 @@ class Hand:
         total, soft_ace = self.calculate_hand()
         return soft_ace
 
+    def face_down_head_card(self):
+        self.head_card.is_face_down = True
+
+    def face_up_head_card(self):
+        self.head_card.is_face_down = False
+
 class PlayerHand(Hand):
-    def __init__(self, owner, bet):
+    def __init__(self, owner):
         self.head_card = None
+        self.size = 0
         self.owner = owner
 
-    def outcome(self, outcome):
-
     def get_card(self):
+        if self.calculate_total() == "BUST":
+            return
         card = self.owner.dealer.deck.pop_card()
         card.next_card = self.head_card
         self.head_card = card
@@ -259,11 +383,8 @@ class DealerHand(Hand):
         self.head_card = card
         self.size += 1
 
-    def face_down_head_card(self):
-        self.head_card.is_face_down = True
-
 def clear():
-    os.system('cls')
+    os.system('clear')
 
 def enter_casino():
     clear()
@@ -273,19 +394,21 @@ def enter_casino():
     clear()
 
 def enter_positive_integer(string):
-    result = input(string)
-    while (not isinstance(result, int)) or result < 0:
+    try:
+        result = int(input(string))
+    except ValueError:
         clear()
-        if not isinstance(result, int):
-            print("Invalid input. Must be whole number.")
-        elif result < 0:
-            print("Invalid input. Must be positive number.")
-        result = input(string)
+        print("Invalid input. Must be whole number.")
+        return enter_positive_integer(string)
+    if result < 0:
+        clear()
+        print("Invalid input. Must be positive number.")
+        return enter_positive_integer(string)
     return result
 
 def enter_YorN(string):
     result = input(string)
-    while result != "Y" or result != "N" or result != "y" or result != "n":
+    while result != "Y" and result != "N" and result != "y" and result != "n":
         clear()
         print("Invalid input.")
         result = input(string)
@@ -302,5 +425,12 @@ player.add_chips()
 print("Here is your table, have fun! Press enter to continue: ")
 input("")
 clear()
-while exit:
+while True:
     player.play_hand()
+    exit = enter_YorN("Well that was fun! But gambling addiction is serious. Do you want to stop? Y or N: ")
+    if exit:
+        break
+    clear()
+    input("Alright, one more hand! Press enter to continue:")
+    clear()
+    player.prepare_for_next_hand()
